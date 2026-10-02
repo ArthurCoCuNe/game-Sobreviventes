@@ -1,0 +1,133 @@
+\documentclass[11pt, a4paper]{article}
+
+% --- UNIVERSAL PREAMBLE BLOCK ---
+\usepackage[a4paper, top=2.5cm, bottom=2.5cm, left=2cm, right=2cm]{geometry}
+\usepackage{fontspec}
+
+\usepackage[portuguese, bidi=basic, provide=*]{babel}
+
+\babelprovide[import, onchar=ids fonts]{portuguese}
+\babelprovide[import, onchar=ids fonts]{english}
+
+% Set default/Latin font to Sans Serif in the main (rm) slot
+\babelfont{rm}{Noto Sans}
+
+% Add because main language is not English
+\usepackage{enumitem}
+\setlist[itemize]{label=-}
+% --------------------------------
+
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{titlesec}
+
+% Formatando os títulos para um visual mais profissional
+\titleformat{\section}{\large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{1em}{}
+
+\title{\vspace{-2cm}\textbf{Proposta de Projeto: Jogo 2D Interativo em FPGA}\\
+\large Disciplina de Sistemas Digitais}
+\author{
+    Arthur Neves\\
+    \textit{VGA e Clock}
+    \and
+    Paola Perim\\
+    \textit{Gráficos e Entradas}
+    \and
+    Rodrigo Namora\\
+    \textit{FSM e Física}
+}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{Descrição Geral do Projeto}
+O projeto consiste no desenvolvimento de um jogo digital 2D interativo implementado em linguagem VHDL, utilizando uma placa FPGA. O jogo será exibido em um monitor padrão através de uma interface VGA operando na resolução de 640x480 pixels. 
+
+O design do jogo foi inspirado pelas mecânicas de movimento de uma fase do jogo \textit{Undertale} e na temática de desvio de obstáculos do clássico \textit{Asteroids} da Atari. O jogador assumirá o controle de um personagem que poderá se mover em 8 direções distintas (combinando eixos vertical e horizontal). O objetivo central é desviar de asteroides e outros obstáculos que surgirão e se aproximarão de diversas direções na tela.
+
+A condição de vitória (Vitória) é atingida quando o jogador coleta 4 pontos de objetivo dispostos pelo mapa. A condição de derrota (Game Over) ocorre caso o sistema detecte 4 colisões do personagem com os obstáculos.
+
+\section{Módulos do Sistema e Responsabilidades}
+Embora o diagrama de blocos detalhado seja apresentado em documento anexo, a arquitetura do projeto foi dividida em cinco módulos principais, distribuídos entre os membros do grupo visando o desenvolvimento paralelo e a integração eficiente:
+
+\begin{table}[h]
+    \centering
+    \begin{tabularx}{\textwidth}{l l X}
+        \toprule
+        \textbf{Aluno(a)} & \textbf{Módulos} & \textbf{Responsabilidades} \\
+        \midrule
+        Arthur Neves & \texttt{clock\_div}, \texttt{vga\_sync} & Responsável pela geração de clock para o padrão VGA e controle dos pulsos de sincronização horizontal e vertical. \\
+        \addlinespace
+        Paola Perim & \texttt{debouncer}, \texttt{gerador\_grafico} & Responsável por tratar os ruídos mecânicos dos botões e pela lógica de renderização dos pixels, cores e desenhos na tela. \\
+        \addlinespace
+        Rodrigo Namora & \texttt{fsm\_jogo} & Responsável pela Máquina de Estados Finita principal, cálculo da física de colisão, movimentação e transição de telas (Início $\rightarrow$ Jogando $\rightarrow$ Game Over/Vitória). \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+\section{Entradas, Saídas e Protocolos de Comunicação}
+O sistema fará uso de recursos integrados da placa FPGA, contando com botões do tipo push-button para entrada e uma porta VGA para saída de vídeo. 
+
+\subsection{Sinais de Entrada}
+Foram alocados 5 botões da placa para o controle do sistema. Para garantir o funcionamento estável, todas as entradas passarão por um módulo de \textit{debouncing}, com temporização projetada para ignorar ruídos (bouncing) por um período de aproximadamente 10 ms a 20 ms.
+\begin{itemize}
+    \item \textbf{Push-button (Reset/Play):} 1 bit. Utilizado para reiniciar a placa e também para avançar da tela de "Início" para "Jogando".
+    \item \textbf{Push-buttons Direcionais:} 4 botões de 1 bit cada (Direita, Esquerda, Cima, Baixo). Combinados, permitem movimentação em 8 eixos.
+\end{itemize}
+
+\subsection{Sinais de Saída e Protocolo VGA}
+A comunicação visual utilizará o padrão VGA a 60 Hz na resolução 640x480. Para este protocolo, o divisor de clock gerará uma frequência de \textit{pixel clock} de 25 MHz a partir do clock base da placa.
+\begin{itemize}
+    \item \textbf{Saída de Cor (RGB):} Vetor \texttt{2 downto 0} (3 bits, sendo 1 bit por canal: Red, Green, Blue), permitindo 8 cores distintas para desenhar o ambiente.
+    \item \textbf{H Sync:} 1 bit. Pulso de sincronismo horizontal.
+    \item \textbf{V Sync:} 1 bit. Pulso de sincronismo vertical.
+\end{itemize}
+
+\section{Proposta de Implementação e Validação}
+A arquitetura do código foi estruturada em VHDL e será composta pelos seguintes arquivos principais: \texttt{clock\_div.vhd}, \texttt{vga\_sync.vhd}, \texttt{fsm\_jogo.vhd}, \texttt{gerador\_grafico.vhd}, e \texttt{debouncer.vhd}, além de um arquivo estrutural \textit{Top Level}.
+
+Para a validação e verificação do projeto, utilizaremos a ferramenta \textbf{GHDL} em conjunto com o software \textbf{GTKWave} para a análise das formas de onda (\textit{waveforms}). A abordagem de testes será exaustiva: serão desenvolvidos testbenches individuais para avaliar o comportamento isolado de cada um dos cinco blocos mencionados. Ao final, um testbench do módulo principal (\textit{top level}) será executado para garantir que a integração entre a Máquina de Estados, o temporizador VGA e os geradores gráficos funcione perfeitamente antes da síntese e gravação física na placa FPGA.
+
+\section{Marcos de Entrega}
+Para atender aos requisitos de planejamento da disciplina, o desenvolvimento foi fatiado em dois grandes marcos operacionais:
+
+\subsection{Marco 1: Relatório Parcial (13/11)}
+Este marco consiste no \textbf{Produto Mínimo Viável (MVP) executável na placa}. Para esta data, o sistema será capaz de:
+\begin{itemize}
+    \item Dividir o clock com sucesso (25MHz).
+    \item Gerar o sinal VGA perfeitamente estável (tela colorida de fundo sem distorções).
+    \item Ler os botões através do circuito \textit{debouncer} e mover um bloco simples (representando o jogador) pelos limites da tela de forma responsiva.
+\end{itemize}
+
+\subsection{Marco 2: Relatório Final (11/12)}
+O produto final com todas as mecânicas descritas na proposta:
+\begin{itemize}
+    \item Máquina de estados completa (Telas de menu, Início e Fim).
+    \item Implementação da física de geração de obstáculos randômicos ou em padrão pré-estabelecido.
+    \item Detecção de colisões e pontuação implementadas.
+    \item Substituição do "bloco simples" por \textit{sprites} desenhados no módulo de geração gráfica.
+\end{itemize}
+
+\section{Cronograma de Implementação}
+O cronograma abaixo reflete as etapas de desenvolvimento distribuídas ao longo das semanas da disciplina:
+
+\vspace{0.3cm}
+\noindent
+\begin{tabularx}{\textwidth}{@{} l X @{}}
+    \toprule
+    \textbf{Data/Período} & \textbf{Atividade Planejada} \\
+    \midrule
+    \textbf{02/10} & Entrega do Entregável 1: Proposta de Projeto. \\
+    \textbf{09/10 a 23/10} & Desenvolvimento dos módulos base: Divisor de Clock, Sincronismo VGA e Debouncer. Primeiros testes físicos. \\
+    \textbf{30/10 a 06/11} & Programação da lógica de movimento básico e teste de renderização no monitor. \\
+    \textbf{13/11} & \textbf{Entrega do Relatório Parcial (Marco 1)} com MVP rodando na FPGA. \\
+    \textbf{20/11 a 27/11} & Desenvolvimento da FSM (Telas do Jogo), física de colisão, sistema de pontos e geração de obstáculos. \\
+    \textbf{04/12} & Integração dos módulos, testes no GTKWave e depuração fina (\textit{troubleshooting}) na placa. \\
+    \textbf{11/12} & \textbf{Entrega do Relatório Final} e apresentação do projeto funcionando. \\
+    \bottomrule
+\end{tabularx}
+
+\end{document}
