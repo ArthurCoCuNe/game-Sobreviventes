@@ -1,0 +1,196 @@
+\documentclass[11pt, a4paper]{article}
+
+% --- PREÂMBULO OTIMIZADO PARA LUALATEX ---
+\usepackage{fontspec}
+\usepackage[portuguese]{babel}
+\usepackage[a4paper, top=2.5cm, bottom=2.5cm, left=2cm, right=2cm]{geometry}
+\usepackage{enumitem}
+\setlist[itemize]{label=-}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{titlesec}
+\usepackage{graphicx} % Para as imagens
+\usepackage{float}    % Para fixar as imagens com [H]
+
+% Formatando os títulos
+\titleformat{\section}{\large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{1em}{}
+
+\title{\vspace{-2cm}\textbf{Proposta de Projeto: Jogo 2D Interativo em FPGA}\\
+\large Disciplina de Sistemas Digitais}
+\author{
+    Arthur Neves\\
+    \textit{VGA e Clock}
+    \and
+    Paola Perim\\
+    \textit{Gráficos e Entradas}
+    \and
+    Rodrigo Namora\\
+    \textit{FSM e Física}
+}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{Descrição Geral do Projeto}
+O projeto consiste no desenvolvimento de um jogo digital 2D interativo implementado em linguagem VHDL, utilizando uma placa FPGA. O jogo será exibido em um monitor padrão através de uma interface VGA operando na resolução de 640x480 pixels. 
+
+O design do jogo foi inspirado pelas mecânicas de movimento de uma fase do jogo \textit{Undertale} e na temática de desvio de obstáculos do clássico \textit{Asteroids} da Atari. O jogador assumirá o controle de um personagem que poderá se mover em 8 direções distintas (combinando eixos vertical e horizontal). O objetivo central é desviar de asteroides e outros obstáculos que surgirão e se aproximarão de diversas direções na tela.
+
+A condição de vitória (Vitória) é atingida quando o jogador coleta 4 pontos de objetivo dispostos pelo mapa. A condição de derrota (Game Over) ocorre caso o sistema detecte 4 colisões do personagem com os obstáculos.
+
+\section{Módulos do Sistema e Responsabilidades}
+A arquitetura do projeto foi dividida em cinco módulos principais, distribuídos entre os membros do grupo visando o desenvolvimento paralelo e a integração eficiente:
+
+\begin{table}[H]
+    \centering
+    \begin{tabularx}{\textwidth}{l l X}
+        \toprule
+        \textbf{Aluno(a)} & \textbf{Módulos} & \textbf{Responsabilidades} \\
+        \midrule
+        Arthur Neves & \texttt{clock\_div}, \texttt{vga\_sync} & Responsável pela geração de clock para o padrão VGA e controle dos pulsos de sincronização horizontal e vertical. \\
+        \addlinespace
+        Paola Perim & \texttt{debouncer}, \texttt{gerador\_grafico} & Responsável por tratar os ruídos mecânicos dos botões e pela lógica de renderização dos pixels, cores e desenhos na tela. \\
+        \addlinespace
+        Rodrigo Namora & \texttt{fsm\_jogo} & Responsável pela Máquina de Estados Finita principal, cálculo da física de colisão, movimentação e transição de telas (Início $\rightarrow$ Jogando $\rightarrow$ Game Over/Vitória). \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+\section{Descrição Modular e Diagramas de Blocos}
+Nesta seção, detalhamos as interfaces e as lógicas internas dos principais módulos estruturais que compõem o sistema.
+
+\subsection{Módulo Principal (Top Level)}
+O arquivo estrutural \texttt{main.vhd} é o responsável por instanciar e interligar todos os subcomponentes do projeto. Conforme ilustrado na Figura 1, o módulo recebe as entradas físicas da placa, sendo o \texttt{Reset}, o \texttt{Clock} e os botões direcionais de 4 bits (sinalizados como \texttt{decb}). O \texttt{main.vhd} também gera as saídas diretas para a interface visual, fornecendo as Cores de 3 bits (\texttt{RGB}), além dos sinais de sincronismo \texttt{v\_sync} e \texttt{h\_sync}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.55\textwidth]{main.png}
+    \caption{Diagrama de blocos do módulo Top Level (\texttt{main.vhd}).}
+\end{figure}
+
+\subsection{Divisor de Clock e Sincronização VGA}
+O controle de vídeo é composto por dois módulos encadeados, como mostra a Figura 2:
+\begin{itemize}
+    \item \textbf{\texttt{clock\_div.vhd}:} Módulo que recebe o sinal de \texttt{Clock} e o \texttt{Reset}, e gera na saída uma frequência adaptada (\texttt{tick\_rate}).
+    \item \textbf{\texttt{vga\_sync.vhd}:} A partir do \texttt{tick\_rate}, \texttt{Clock} e \texttt{Reset} na entrada, este módulo gerencia a comunicação para o monitor. Ele gera os pulsos de sincronismo vertical e horizontal (\texttt{v\_sync} e \texttt{h\_sync}), os barramentos de coordenadas \texttt{pixel\_x} e \texttt{pixel\_y} (ambos de 10 bits), além das saídas \texttt{video\_on} e o marcador \texttt{frame\_tick} de retorno.
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.55\textwidth]{vga.png}
+    \caption{Diagrama de blocos dos módulos de Clock e Sincronismo VGA.}
+\end{figure}
+
+\subsection{Máquina de Estados e Lógica (\texttt{fsm\_jogo.vhd})}
+A unidade responsável pelas regras e física é a Máquina de Estados (Figura 3). Seus sinais foram organizados da seguinte forma:
+
+\textbf{Sinais de Entrada:}
+\begin{itemize}
+    \item \texttt{clk}: Pulso de clock como entrada.
+    \item \texttt{reset}: Sinal de entrada para voltar a máquina de estados para o seu início, assumindo prioridade máxima.
+    \item \texttt{frame\_tick}: Sinal de entrada para determinar quando a FSM pode mover os objetos, utilizando 60Hz para respeitar a taxa de atualização da tela.
+    \item \texttt{decb\_limpo(3 downto 0)}: Sinais de entrada já limpos pelo debouncer que indicam a direção do jogador (direita, esquerda, cima e baixo).
+\end{itemize}
+
+\textbf{Saídas de Estado Global:}
+\begin{itemize}
+    \item \texttt{game\_state(1 down to 0)}: Sinal de saída para definir e desenhar o estado do game flow. Os valores definidos são 00 para início, 01 para jogando, 10 para game\_over e 11 para vitória.
+    \item \texttt{score(2 down to 0)}: Conta quantos objetivos foram coletados, variando de 0 a 4.
+    \item \texttt{lives(1 down to 0)}: Conta quantas vidas restam, começando de 3 até 0.
+\end{itemize}
+
+\textbf{Saídas do Jogador:}
+\begin{itemize}
+    \item \texttt{player\_x} e \texttt{player\_y (9 down to 0)}: Determinam a posição atual da nave.
+    \item \texttt{player\_state(1 down to 0)}: Informa o status da nave, podendo ser Normal, Invencível (Frames de invincibilidade) ou Explodindo (Possibilidade para animação ao detectar colisão). A porta associada à atividade no bloco é a \texttt{player\_active}.
+\end{itemize}
+
+\textbf{Saídas dos Objetivos e Asteróides:}
+\begin{itemize}
+    \item \texttt{objectives\_active(3 down to 0)}: Cada bit liga ou desliga um dos objetivos na tela. 
+    \item \texttt{objectives\_x} e \texttt{objectives\_y}: Array com 4 posições de 10 bits cada para mapear os objetivos.
+    \item \texttt{asteroids\_active(9 down to 0)}: Cada bit representa o status de vida de um asteroide na tela. Assumimos um máximo de 10 asteroides no jogo, sendo um valor sujeito à mudança.
+    \item \texttt{asteroid\_x} e \texttt{asteroid\_y}: Array de coordenadas para as 10 posições de 10 bits cada.
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{FSM.png}
+    \caption{Diagrama de blocos e lista completa de portas para \texttt{fsm\_jogo.vhd}.}
+\end{figure}
+
+\subsection{Gerador Gráfico e Debouncer}
+O módulo gerador gráfico é responsável por traduzir os estados do jogo (como a posição do jogador, asteroides e objetivos) gerados pela FSM em informações visuais (pixels e cores). Paralelamente, o módulo de debouncer atua diretamente nas entradas físicas para assegurar que os comandos dos botões sejam lidos de forma limpa e sem ruídos mecânicos, como ilustrado na Figura 4.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.55\textwidth]{video.png}
+    \caption{Diagrama de blocos dos módulos Gráfico e Debouncer.}
+\end{figure}
+
+\section{Entradas, Saídas e Protocolos de Comunicação}
+O sistema fará uso de recursos integrados da placa FPGA, contando com botões do tipo push-button para entrada e uma porta VGA para saída de vídeo. 
+
+\subsection{Sinais de Entrada}
+Foram alocados 5 botões da placa para o controle do sistema. Para garantir o funcionamento estável, todas as entradas passarão por um módulo de \textit{debouncing}, com temporização projetada para ignorar ruídos (bouncing) por um período de aproximadamente 10 ms a 20 ms.
+\begin{itemize}
+    \item \textbf{Push-button (Reset/Play):} 1 bit. Utilizado para reiniciar a placa e também para avançar da tela de "Início" para "Jogando".
+    \item \textbf{Push-buttons Direcionais:} 4 botões de 1 bit cada (Direita, Esquerda, Cima, Baixo). Combinados, permitem movimentação em 8 eixos.
+\end{itemize}
+
+\subsection{Sinais de Saída e Protocolo VGA}
+A comunicação visual utilizará o padrão VGA a 60 Hz na resolução 640x480. Para este protocolo, o divisor de clock gerará uma frequência de \textit{pixel clock} de 25 MHz a partir do clock base da placa.
+\begin{itemize}
+    \item \textbf{Saída de Cor (RGB):} Vetor \texttt{2 downto 0} (3 bits, sendo 1 bit por canal: Red, Green, Blue), permitindo 8 cores distintas para desenhar o ambiente.
+    \item \textbf{H Sync:} 1 bit. Pulso de sincronismo horizontal.
+    \item \textbf{V Sync:} 1 bit. Pulso de sincronismo vertical.
+\end{itemize}
+
+\section{Proposta de Implementação e Validação}
+A arquitetura do código foi estruturada em VHDL e será composta pelos arquivos principais citados nos diagramas, além do \texttt{gerador\_grafico.vhd} e \texttt{debouncer.vhd}.
+
+Para a validação e verificação do projeto, utilizaremos a ferramenta \textbf{GHDL} em conjunto com o software \textbf{GTKWave} para a análise das formas de onda (\textit{waveforms}). A abordagem de testes será exaustiva: serão desenvolvidos testbenches individuais para avaliar o comportamento isolado de cada bloco mencionado. Ao final, um testbench do módulo principal (\textit{top level}) será executado para garantir que a integração entre a Máquina de Estados, o temporizador VGA e os geradores gráficos funcione perfeitamente antes da síntese e gravação física na placa FPGA.
+
+\section{Marcos de Entrega}
+Para atender aos requisitos de planejamento da disciplina, o desenvolvimento foi fatiado em dois grandes marcos operacionais:
+
+\subsection{Marco 1: Relatório Parcial (13/11)}
+Este marco consiste no \textbf{Produto Mínimo Viável (MVP) executável na placa}. Para esta data, o sistema será capaz de:
+\begin{itemize}
+    \item Dividir o clock com sucesso (25MHz).
+    \item Gerar o sinal VGA perfeitamente estável (tela colorida de fundo sem distorções).
+    \item Ler os botões através do circuito \textit{debouncer} e mover um bloco simples (representando o jogador) pelos limites da tela de forma responsiva.
+\end{itemize}
+
+\subsection{Marco 2: Relatório Final (11/12)}
+O produto final com todas as mecânicas descritas na proposta:
+\begin{itemize}
+    \item Máquina de estados completa (Telas de menu, Início e Fim).
+    \item Implementação da física de geração de obstáculos randômicos ou em padrão pré-estabelecido.
+    \item Detecção de colisões e pontuação implementadas.
+    \item Substituição do "bloco simples" por \textit{sprites} desenhados no módulo de geração gráfica.
+\end{itemize}
+
+\section{Cronograma de Implementação}
+O cronograma abaixo reflete as etapas de desenvolvimento distribuídas ao longo das semanas da disciplina:
+
+\vspace{0.3cm}
+\noindent
+\begin{tabularx}{\textwidth}{@{} l X @{}}
+    \toprule
+    \textbf{Data/Período} & \textbf{Atividade Planejada} \\
+    \midrule
+    \textbf{02/10} & Entrega do Entregável 1: Proposta de Projeto. \\
+    \textbf{09/10 a 23/10} & Desenvolvimento dos módulos base: Divisor de Clock, Sincronismo VGA e Debouncer. Primeiros testes físicos. \\
+    \textbf{30/10 a 06/11} & Programação da lógica de movimento básico e teste de renderização no monitor. \\
+    \textbf{13/11} & \textbf{Entrega do Relatório Parcial (Marco 1)} com MVP rodando na FPGA. \\
+    \textbf{20/11 a 27/11} & Desenvolvimento da FSM (Telas do Jogo), física de colisão, sistema de pontos e geração de obstáculos. \\
+    \textbf{04/12} & Integração dos módulos, testes no GTKWave e depuração fina (\textit{troubleshooting}) na placa. \\
+    \textbf{11/12} & \textbf{Entrega do Relatório Final} e apresentação do projeto funcionando. \\
+    \bottomrule
+\end{tabularx}
+
+\end{document}
