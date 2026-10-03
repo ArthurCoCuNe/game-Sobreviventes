@@ -1,27 +1,18 @@
 \documentclass[11pt, a4paper]{article}
 
-% --- UNIVERSAL PREAMBLE BLOCK ---
-\usepackage[a4paper, top=2.5cm, bottom=2.5cm, left=2cm, right=2cm]{geometry}
+% --- PREÂMBULO OTIMIZADO PARA LUALATEX ---
 \usepackage{fontspec}
-
-\usepackage[portuguese, bidi=basic, provide=*]{babel}
-
-\babelprovide[import, onchar=ids fonts]{portuguese}
-\babelprovide[import, onchar=ids fonts]{english}
-
-% Set default/Latin font to Sans Serif in the main (rm) slot
-\babelfont{rm}{Noto Sans}
-
-% Add because main language is not English
+\usepackage[portuguese]{babel}
+\usepackage[a4paper, top=2.5cm, bottom=2.5cm, left=2cm, right=2cm]{geometry}
 \usepackage{enumitem}
 \setlist[itemize]{label=-}
-% --------------------------------
-
 \usepackage{booktabs}
 \usepackage{tabularx}
 \usepackage{titlesec}
+\usepackage{graphicx} % Para as imagens
+\usepackage{float}    % Para fixar as imagens com [H]
 
-% Formatando os títulos para um visual mais profissional
+% Formatando os títulos
 \titleformat{\section}{\large\bfseries}{\thesection}{1em}{}
 \titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{1em}{}
 
@@ -51,9 +42,9 @@ O design do jogo foi inspirado pelas mecânicas de movimento de uma fase do jogo
 A condição de vitória (Vitória) é atingida quando o jogador coleta 4 pontos de objetivo dispostos pelo mapa. A condição de derrota (Game Over) ocorre caso o sistema detecte 4 colisões do personagem com os obstáculos.
 
 \section{Módulos do Sistema e Responsabilidades}
-Embora o diagrama de blocos detalhado seja apresentado em documento anexo, a arquitetura do projeto foi dividida em cinco módulos principais, distribuídos entre os membros do grupo visando o desenvolvimento paralelo e a integração eficiente:
+A arquitetura do projeto foi dividida em cinco módulos principais, distribuídos entre os membros do grupo visando o desenvolvimento paralelo e a integração eficiente:
 
-\begin{table}[h]
+\begin{table}[H]
     \centering
     \begin{tabularx}{\textwidth}{l l X}
         \toprule
@@ -67,6 +58,78 @@ Embora o diagrama de blocos detalhado seja apresentado em documento anexo, a arq
         \bottomrule
     \end{tabularx}
 \end{table}
+
+\section{Descrição Modular e Diagramas de Blocos}
+Nesta seção, detalhamos as interfaces e as lógicas internas dos principais módulos estruturais que compõem o sistema.
+
+\subsection{Módulo Principal (Top Level)}
+O arquivo estrutural \texttt{main.vhd} é o responsável por instanciar e interligar todos os subcomponentes do projeto. Conforme ilustrado na Figura 1, o módulo recebe as entradas físicas da placa, sendo o \texttt{Reset}, o \texttt{Clock} e os botões direcionais de 4 bits (sinalizados como \texttt{decb}). O \texttt{main.vhd} também gera as saídas diretas para a interface visual, fornecendo as Cores de 3 bits (\texttt{RGB}), além dos sinais de sincronismo \texttt{v\_sync} e \texttt{h\_sync}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.55\textwidth]{main.png}
+    \caption{Diagrama de blocos do módulo Top Level (\texttt{main.vhd}).}
+\end{figure}
+
+\subsection{Divisor de Clock e Sincronização VGA}
+O controle de vídeo é composto por dois módulos encadeados, como mostra a Figura 2:
+\begin{itemize}
+    \item \textbf{\texttt{clock\_div.vhd}:} Módulo que recebe o sinal de \texttt{Clock} e o \texttt{Reset}, e gera na saída uma frequência adaptada (\texttt{tick\_rate}).
+    \item \textbf{\texttt{vga\_sync.vhd}:} A partir do \texttt{tick\_rate}, \texttt{Clock} e \texttt{Reset} na entrada, este módulo gerencia a comunicação para o monitor. Ele gera os pulsos de sincronismo vertical e horizontal (\texttt{v\_sync} e \texttt{h\_sync}), os barramentos de coordenadas \texttt{pixel\_x} e \texttt{pixel\_y} (ambos de 10 bits), além das saídas \texttt{video\_on} e o marcador \texttt{frame\_tick} de retorno.
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.55\textwidth]{vga.png}
+    \caption{Diagrama de blocos dos módulos de Clock e Sincronismo VGA.}
+\end{figure}
+
+\subsection{Máquina de Estados e Lógica (\texttt{fsm\_jogo.vhd})}
+A unidade responsável pelas regras e física é a Máquina de Estados (Figura 3). Seus sinais foram organizados da seguinte forma:
+
+\textbf{Sinais de Entrada:}
+\begin{itemize}
+    \item \texttt{clk}: Pulso de clock como entrada.
+    \item \texttt{reset}: Sinal de entrada para voltar a máquina de estados para o seu início, assumindo prioridade máxima.
+    \item \texttt{frame\_tick}: Sinal de entrada para determinar quando a FSM pode mover os objetos, utilizando 60Hz para respeitar a taxa de atualização da tela.
+    \item \texttt{decb\_limpo(3 downto 0)}: Sinais de entrada já limpos pelo debouncer que indicam a direção do jogador (direita, esquerda, cima e baixo).
+\end{itemize}
+
+\textbf{Saídas de Estado Global:}
+\begin{itemize}
+    \item \texttt{game\_state(1 down to 0)}: Sinal de saída para definir e desenhar o estado do game flow. Os valores definidos são 00 para início, 01 para jogando, 10 para game\_over e 11 para vitória.
+    \item \texttt{score(2 down to 0)}: Conta quantos objetivos foram coletados, variando de 0 a 4.
+    \item \texttt{lives(1 down to 0)}: Conta quantas vidas restam, começando de 3 até 0.
+\end{itemize}
+
+\textbf{Saídas do Jogador:}
+\begin{itemize}
+    \item \texttt{player\_x} e \texttt{player\_y (9 down to 0)}: Determinam a posição atual da nave.
+    \item \texttt{player\_state(1 down to 0)}: Informa o status da nave, podendo ser Normal, Invencível (Frames de invincibilidade) ou Explodindo (Possibilidade para animação ao detectar colisão). A porta associada à atividade no bloco é a \texttt{player\_active}.
+\end{itemize}
+
+\textbf{Saídas dos Objetivos e Asteróides:}
+\begin{itemize}
+    \item \texttt{objectives\_active(3 down to 0)}: Cada bit liga ou desliga um dos objetivos na tela. 
+    \item \texttt{objectives\_x} e \texttt{objectives\_y}: Array com 4 posições de 10 bits cada para mapear os objetivos.
+    \item \texttt{asteroids\_active(9 down to 0)}: Cada bit representa o status de vida de um asteroide na tela. Assumimos um máximo de 10 asteroides no jogo, sendo um valor sujeito à mudança.
+    \item \texttt{asteroid\_x} e \texttt{asteroid\_y}: Array de coordenadas para as 10 posições de 10 bits cada.
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{FSM.png}
+    \caption{Diagrama de blocos e lista completa de portas para \texttt{fsm\_jogo.vhd}.}
+\end{figure}
+
+\subsection{Gerador Gráfico e Debouncer}
+O módulo gerador gráfico é responsável por traduzir os estados do jogo (como a posição do jogador, asteroides e objetivos) gerados pela FSM em informações visuais (pixels e cores). Paralelamente, o módulo de debouncer atua diretamente nas entradas físicas para assegurar que os comandos dos botões sejam lidos de forma limpa e sem ruídos mecânicos, como ilustrado na Figura 4.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.55\textwidth]{video.png}
+    \caption{Diagrama de blocos dos módulos Gráfico e Debouncer.}
+\end{figure}
 
 \section{Entradas, Saídas e Protocolos de Comunicação}
 O sistema fará uso de recursos integrados da placa FPGA, contando com botões do tipo push-button para entrada e uma porta VGA para saída de vídeo. 
@@ -87,9 +150,9 @@ A comunicação visual utilizará o padrão VGA a 60 Hz na resolução 640x480. 
 \end{itemize}
 
 \section{Proposta de Implementação e Validação}
-A arquitetura do código foi estruturada em VHDL e será composta pelos seguintes arquivos principais: \texttt{clock\_div.vhd}, \texttt{vga\_sync.vhd}, \texttt{fsm\_jogo.vhd}, \texttt{gerador\_grafico.vhd}, e \texttt{debouncer.vhd}, além de um arquivo estrutural \textit{Top Level}.
+A arquitetura do código foi estruturada em VHDL e será composta pelos arquivos principais citados nos diagramas, além do \texttt{gerador\_grafico.vhd} e \texttt{debouncer.vhd}.
 
-Para a validação e verificação do projeto, utilizaremos a ferramenta \textbf{GHDL} em conjunto com o software \textbf{GTKWave} para a análise das formas de onda (\textit{waveforms}). A abordagem de testes será exaustiva: serão desenvolvidos testbenches individuais para avaliar o comportamento isolado de cada um dos cinco blocos mencionados. Ao final, um testbench do módulo principal (\textit{top level}) será executado para garantir que a integração entre a Máquina de Estados, o temporizador VGA e os geradores gráficos funcione perfeitamente antes da síntese e gravação física na placa FPGA.
+Para a validação e verificação do projeto, utilizaremos a ferramenta \textbf{GHDL} em conjunto com o software \textbf{GTKWave} para a análise das formas de onda (\textit{waveforms}). A abordagem de testes será exaustiva: serão desenvolvidos testbenches individuais para avaliar o comportamento isolado de cada bloco mencionado. Ao final, um testbench do módulo principal (\textit{top level}) será executado para garantir que a integração entre a Máquina de Estados, o temporizador VGA e os geradores gráficos funcione perfeitamente antes da síntese e gravação física na placa FPGA.
 
 \section{Marcos de Entrega}
 Para atender aos requisitos de planejamento da disciplina, o desenvolvimento foi fatiado em dois grandes marcos operacionais:
