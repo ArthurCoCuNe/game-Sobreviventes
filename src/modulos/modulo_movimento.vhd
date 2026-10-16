@@ -1,7 +1,7 @@
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL; 
-use work.game_package.all; – Puxa as constantes globais do jogo
+use work.game_package.all; -- Puxa as constantes globais do jogo
 
 entity modulo_movimento is
     port (
@@ -39,7 +39,7 @@ begin
         end if;
     end process;
 
-   – Física (Atualização de posição e colisão com paredes)
+   -- Física (Atualização de posição e colisão com paredes)
     process(x_reg, y_reg, decb_limpo)
     begin
         x_next <= x_reg;
