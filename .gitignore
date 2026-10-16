@@ -1,0 +1,16 @@
+# ==============================================================================
+# Git Ignore - Projeto VHDL
+# ==============================================================================
+
+# Ignorar Makefiles locais em qualquer pasta do repositorio
+[Mm]akefile
+[Mm]akefile.*
+
+# Arquivos de compilacao e bibliotecas temporarias do GHDL
+*.cf
+work-obj*.cf
+
+# Arquivos de simulacao e formas de onda
+*.ghw
+*.vcd
+sim/
