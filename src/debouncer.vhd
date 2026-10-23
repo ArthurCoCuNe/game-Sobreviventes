@@ -15,8 +15,8 @@ entity debouncer is
     );
     port (
         clk        : in  std_logic;
-        reset      : in  std_logic;                       -- ativo em nivel alto
-        decb       : in  std_logic_vector(N - 1 downto 0) -- respectivamente direita, esquerda, cima, baixo
+        reset      : in  std_logic;                        -- ativo em nivel alto
+        decb       : in  std_logic_vector(N - 1 downto 0); -- respectivamente direita, esquerda, cima, baixo
         decb_limpo : out std_logic_vector(N - 1 downto 0)
     );
 end entity debouncer;
