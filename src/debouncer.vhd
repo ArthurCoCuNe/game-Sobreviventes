@@ -1,3 +1,4 @@
+
 -- debouncer.vhd
 -- Filtra o ruido mecanico 
 -- Um sinal so muda na saida depois de ficar estavel por DEBOUNCE_MS milissegundos.
