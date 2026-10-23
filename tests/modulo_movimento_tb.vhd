@@ -101,6 +101,25 @@ begin
         decb_limpo <= "0000";
         wait for CLK_PERIOD;
 
+        -- =====================================================================
+	-- 7. Parado (Cima + Baixo): decb_limpo = "0011"
+	-- Esperado: X=316, Y=228
+        -- =====================================================================
+	decb_limpo <= "0011";
+        wait for CLK_PERIOD;
+        decb_limpo <= "0000";
+        wait for CLK_PERIOD;
+
+        -- =====================================================================
+	-- 8. Parado (Cima + Baixo): decb_limpo = "1100"
+	-- Esperado: X=316, Y=228
+        -- =====================================================================
+	decb_limpo <= "1100";
+        wait for CLK_PERIOD;
+        decb_limpo <= "0000";
+        wait for CLK_PERIOD;
+
+
         -- Fim do teste
         wait;
     end process;
