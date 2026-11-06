@@ -1,0 +1,20 @@
+# 1. Clock (Oscilador de 50 MHz)
+NET "Clock" LOC = "E12" | IOSTANDARD = LVCMOS33 ;
+
+# 2. Reset (Mapeado para o botão central do Rotary Encoder)
+NET "Reset" LOC = "R13" | IOSTANDARD = LVCMOS33 | PULLDOWN ;
+
+# 3. Botões Direcionais (decb: 3=Direita, 2=Esquerda, 1=Cima, 0=Baixo)
+NET "decb<3>" LOC = "T16" | IOSTANDARD = LVCMOS33 | PULLDOWN ;
+NET "decb<2>" LOC = "U15" | IOSTANDARD = LVCMOS33 | PULLDOWN ;
+NET "decb<1>" LOC = "T14" | IOSTANDARD = LVCMOS33 | PULLDOWN ;
+NET "decb<0>" LOC = "T15" | IOSTANDARD = LVCMOS33 | PULLDOWN ;
+
+# 4. Sincronismo VGA
+NET "h_sync" LOC = "C11" | IOSTANDARD = LVCMOS33 | DRIVE = 8 | SLEW = FAST ;
+NET "v_sync" LOC = "B11" | IOSTANDARD = LVCMOS33 | DRIVE = 8 | SLEW = FAST ;
+
+# 5. Cores VGA (1 bit para R, G e B mapeados nos bits mais significativos)
+NET "RGB<2>" LOC = "C8" | IOSTANDARD = LVCMOS33 | DRIVE = 8 | SLEW = FAST ; 
+NET "RGB<1>" LOC = "D6" | IOSTANDARD = LVCMOS33 | DRIVE = 8 | SLEW = FAST ; 
+NET "RGB<0>" LOC = "C9" | IOSTANDARD = LVCMOS33 | DRIVE = 8 | SLEW = FAST ;
