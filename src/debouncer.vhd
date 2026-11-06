@@ -1,9 +1,3 @@
--- debouncer.vhd
--- Filtra o ruido mecanico 
--- Um sinal so muda na saida depois de ficar estavel por DEBOUNCE_MS milissegundos.
--- Generic N permite reutilizar o modulo (4 bits para os direcionais,
--- 1 bit para o botao Reset/Play).
-
 library ieee;
 use ieee.std_logic_1164.all;
 
@@ -19,7 +13,7 @@ entity debouncer is
         decb       : in  std_logic_vector(N - 1 downto 0); -- respectivamente direita, esquerda, cima, baixo
         decb_limpo : out std_logic_vector(N - 1 downto 0)
     );
-end entity debouncer;
+end debouncer;
 
 architecture behavioural of debouncer is
     -- Numero de ciclos de clock que a entrada precisa ficar estavel
