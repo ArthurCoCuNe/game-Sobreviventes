@@ -22,7 +22,8 @@ Para a entrega parcial, foi feito o sistema de movimentação do personagem, os 
   - `gerador_grafico.vhd`: Renderização gráfica
   - `debouncer.vhd`: Tratamento de ruídos mecânicos dos botões
 - `tb/`: Testbenches para validação e simulação isolada e de integração dos módulos
-- `sim/`: Scripts de simulação e arquivos de forma de onda (`.vcd`, `.ghw`)
+- `relatorio parcial/`: Titulo autoexplicativo
+- `imagens/` : todas as imagens utilizadas no projeto
 
 ## Ferramentas Recomendadas e Validação
 - **Simulador:** GHDL
