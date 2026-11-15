@@ -38,7 +38,7 @@ Para a entrega parcial, foi feito o sistema de movimentação do personagem, os 
 ## Diagramas de Blocos
 Abaixo, o esquema e diagrama de blocos para melhor detalhar as entradas, saídas e interações de cada módulo implementado nessa entrega parcial.
 
-![rtlschematic (1)](https://hackmd.io/_uploads/ry5RLqv0Me.png)
+![Diagrama de Blocos](./imagens/rtlschematic.png)
 
 ## Testes de simulação realizados
 Além do teste na placa, que foi bem sucedido, realizamos simulações via testbenches pelo `GTKWave`, arquivos que estão localizados no diretório `tb/` do projeto.
